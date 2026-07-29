@@ -1485,6 +1485,7 @@ final class ActivityManagerConstants extends ContentObserver {
         final int rawMaxEmptyProcesses = computeEmptyProcessLimit(CUR_MAX_CACHED_PROCESSES);
         CUR_TRIM_EMPTY_PROCESSES = rawMaxEmptyProcesses / 2;
         CUR_TRIM_CACHED_PROCESSES = (CUR_MAX_CACHED_PROCESSES - rawMaxEmptyProcesses) / 3;
+        applyBlossomRamPolicy();   // Blossom RAM policy (constructor: cierra el hueco de arranque)
         loadNativeBootDeviceConfigConstants();
         mDefaultDisableAppProfilerPssProfiling = context.getResources().getBoolean(
                 R.bool.config_am_disablePssProfiling);
@@ -1947,6 +1948,7 @@ final class ActivityManagerConstants extends ContentObserver {
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER,
                 KEY_MAX_EMPTY_TIME_MILLIS,
                 DEFAULT_MAX_EMPTY_TIME_MILLIS);
+        applyBlossomRamPolicy();   // Blossom RAM policy
     }
 
     private void updateNetworkAccessTimeoutMs() {
@@ -2057,6 +2059,23 @@ final class ActivityManagerConstants extends ContentObserver {
                 mSystemServerAutomaticHeapDumpPackageName);
     }
 
+    // --- Blossom RAM policy: unica fuente de verdad de los valores (ver BlossomRamPolicy) ---
+    // Se llama al final del constructor Y de cada updater de DeviceConfig, porque un push de
+    // Phenotype volveria a pisar estos campos. Idempotente y sin I/O.
+    private void applyBlossomRamPolicy() {
+        if (!BlossomRamPolicy.ENABLED) return;
+        MAX_CACHED_PROCESSES = BlossomRamPolicy.MAX_CACHED_PROCESSES;
+        CUR_MAX_CACHED_PROCESSES = Integer.min(CUR_MAX_CACHED_PROCESSES,
+                BlossomRamPolicy.MAX_CACHED_PROCESSES);
+        CUR_MAX_EMPTY_PROCESSES = computeEmptyProcessLimit(CUR_MAX_CACHED_PROCESSES);
+        final int blossomRawMaxEmpty = computeEmptyProcessLimit(CUR_MAX_CACHED_PROCESSES);
+        CUR_TRIM_EMPTY_PROCESSES = blossomRawMaxEmpty / 2;
+        CUR_TRIM_CACHED_PROCESSES = (CUR_MAX_CACHED_PROCESSES - blossomRawMaxEmpty) / 3;
+        PROACTIVE_KILLS_ENABLED = BlossomRamPolicy.PROACTIVE_KILLS_ENABLED;
+        LOW_SWAP_THRESHOLD_PERCENT = BlossomRamPolicy.LOW_SWAP_THRESHOLD_PERCENT;
+        mMaxEmptyTimeMillis = BlossomRamPolicy.MAX_EMPTY_TIME_MILLIS;
+    }
+
     private void updateMaxCachedProcesses() {
         String maxCachedProcessesFlag = DeviceConfig.getProperty(
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER, KEY_MAX_CACHED_PROCESSES);
@@ -2078,6 +2097,7 @@ final class ActivityManagerConstants extends ContentObserver {
         final int rawMaxEmptyProcesses = computeEmptyProcessLimit(CUR_MAX_CACHED_PROCESSES);
         CUR_TRIM_EMPTY_PROCESSES = rawMaxEmptyProcesses / 2;
         CUR_TRIM_CACHED_PROCESSES = (CUR_MAX_CACHED_PROCESSES - rawMaxEmptyProcesses) / 3;
+        applyBlossomRamPolicy();   // Blossom RAM policy
     }
 
     private void updateProactiveKillsEnabled() {
@@ -2085,6 +2105,7 @@ final class ActivityManagerConstants extends ContentObserver {
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER,
                 KEY_PROACTIVE_KILLS_ENABLED,
                 DEFAULT_PROACTIVE_KILLS_ENABLED);
+        applyBlossomRamPolicy();   // Blossom RAM policy
     }
 
     private void updateLowSwapThresholdPercent() {
@@ -2092,6 +2113,7 @@ final class ActivityManagerConstants extends ContentObserver {
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER,
                 KEY_LOW_SWAP_THRESHOLD_PERCENT,
                 DEFAULT_LOW_SWAP_THRESHOLD_PERCENT);
+        applyBlossomRamPolicy();   // Blossom RAM policy
     }
 
 

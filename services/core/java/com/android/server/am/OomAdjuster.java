@@ -1044,7 +1044,15 @@ public abstract class OomAdjuster {
                         // This process is a cached process holding activities...
                         // assign it the next cached value for that type, and then
                         // step that cached level.
-                        final int rawAdj = curCachedAdj + curCachedImpAdj;
+                        int rawAdj = curCachedAdj + curCachedImpAdj;
+                        // --- Blossom RAM policy: protege paquetes clave de la eviccion LRU.
+                        // Se clampa la LOCAL rawAdj, NO curCachedAdj: mutar curCachedAdj
+                        // corromperia el stepping del bucle y arrastraria a los procesos
+                        // siguientes. O(1) (HashSet), sin I/O: apto para este hot-path. ---
+                        if (BlossomRamPolicy.PROTECT && app.info != null
+                                && BlossomRamPolicy.isProtected(app.info.packageName)) {
+                            rawAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
+                        }
                         state.setCurRawAdj(rawAdj);
                         state.setCurAdj(
                                 applyBindAboveClientToAdj(psr.isHasAboveClient(), rawAdj));
@@ -1073,9 +1081,16 @@ public abstract class OomAdjuster {
                         // long-running services that have dropped down to the
                         // cached level will be treated as empty (since their process
                         // state is still as a service), which is what we want.
-                        state.setCurRawAdj(curEmptyAdj);
+                        int emptyAdj = curEmptyAdj;
+                        // --- Blossom RAM policy: misma proteccion en la banda "empty", que es
+                        // donde suele caer una app de banca en background con servicios. ---
+                        if (BlossomRamPolicy.PROTECT && app.info != null
+                                && BlossomRamPolicy.isProtected(app.info.packageName)) {
+                            emptyAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
+                        }
+                        state.setCurRawAdj(emptyAdj);
                         state.setCurAdj(applyBindAboveClientToAdj(psr.isHasAboveClient(),
-                                curEmptyAdj));
+                                emptyAdj));
                         if (DEBUG_LRU) {
                             Slog.d(TAG_LRU, "Assigning empty LRU #" + i
                                     + " adj: " + state.getCurAdj()
@@ -1144,6 +1159,9 @@ public abstract class OomAdjuster {
                 }
 
                 final ProcessServiceRecordInternal psr = app.getServices();
+                // Blossom punto (b): protege de los kills por CONTEO/posicion LRU.
+                final boolean blossomProtected = BlossomRamPolicy.PROTECT
+                        && BlossomRamPolicy.isProtected(app.getPackageName());
                 // Count the number of process types.
                 switch (app.getCurProcState()) {
                     case PROCESS_STATE_CACHED_ACTIVITY:
@@ -1165,18 +1183,18 @@ public abstract class OomAdjuster {
                         } else {
                             lastCachedGroupUid = lastCachedGroup = 0;
                         }
-                        if ((numCached - numCachedExtraGroup) > cachedProcessLimit) {
+                        if (!blossomProtected && (numCached - numCachedExtraGroup) > cachedProcessLimit) {
                             app.killLocked("cached #" + numCached,
                                     "too many cached",
                                     ApplicationExitInfo.REASON_OTHER,
                                     ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
                                     true);
-                        } else if (proactiveKillsEnabled) {
+                        } else if (proactiveKillsEnabled && !blossomProtected) {
                             lruCachedApp = app;
                         }
                         break;
                     case PROCESS_STATE_CACHED_EMPTY:
-                        if (numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
+                        if (!blossomProtected && numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
                                 && app.getLastActivityTime() < oldTime) {
                             app.killLocked("empty for " + ((now
                                     - app.getLastActivityTime()) / 1000) + "s",
@@ -1186,13 +1204,13 @@ public abstract class OomAdjuster {
                                     true);
                         } else {
                             numEmpty++;
-                            if (numEmpty > emptyProcessLimit) {
+                            if (!blossomProtected && numEmpty > emptyProcessLimit) {
                                 app.killLocked("empty #" + numEmpty,
                                         "too many empty",
                                         ApplicationExitInfo.REASON_OTHER,
                                         ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
                                         true);
-                            } else if (proactiveKillsEnabled) {
+                            } else if (proactiveKillsEnabled && !blossomProtected) {
                                 lruCachedApp = app;
                             }
                         }
