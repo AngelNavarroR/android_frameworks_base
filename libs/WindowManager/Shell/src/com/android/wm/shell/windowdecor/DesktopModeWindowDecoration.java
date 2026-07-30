@@ -874,7 +874,7 @@ public class DesktopModeWindowDecoration extends WindowDecoration<WindowDecorLin
                 mResult.mCaptionY,
                 mResult.mCaptionX + mResult.mCaptionWidth,
                 mResult.mCaptionY + mResult.mCaptionHeight);
-        if (mSplitScreenController.getSplitPosition(mTaskInfo.taskId)
+        if (mSplitScreenController != null && mSplitScreenController.getSplitPosition(mTaskInfo.taskId)
                 == SPLIT_POSITION_BOTTOM_OR_RIGHT
         ) {
             if (mSplitScreenController.isLeftRightSplit()) {
@@ -932,7 +932,7 @@ public class DesktopModeWindowDecoration extends WindowDecoration<WindowDecorLin
                 && !mDesktopState.isDesktopModeSupportedOnDisplay(mDisplay)) {
             return AppHandleWindowingMode.APP_HANDLE_WINDOWING_MODE_BUBBLE;
         }
-        if (mSplitScreenController.isTaskInSplitScreen(mTaskInfo.taskId)) {
+        if (mSplitScreenController != null && mSplitScreenController.isTaskInSplitScreen(mTaskInfo.taskId)) {
             return AppHandleWindowingMode.APP_HANDLE_WINDOWING_MODE_SPLIT_SCREEN;
         }
         if (isAppHandle(mWindowDecorViewHolder)) {
@@ -955,7 +955,7 @@ public class DesktopModeWindowDecoration extends WindowDecoration<WindowDecorLin
 
     private Point determineHandlePosition() {
         final Point position = new Point(mResult.mCaptionX, 0);
-        if (mSplitScreenController.getSplitPosition(mTaskInfo.taskId)
+        if (mSplitScreenController != null && mSplitScreenController.getSplitPosition(mTaskInfo.taskId)
                 == SPLIT_POSITION_BOTTOM_OR_RIGHT
         ) {
             if (mSplitScreenController.isLeftRightSplit()) {
@@ -1142,7 +1142,8 @@ public class DesktopModeWindowDecoration extends WindowDecoration<WindowDecorLin
             }
         }
         relayoutParams.mIsCaptionVisible = showCaption;
-        final boolean isBottomSplit = !splitScreenController.isLeftRightSplit()
+        final boolean isBottomSplit = splitScreenController != null /*SPLITNULLGUARD*/
+                && !splitScreenController.isLeftRightSplit()
                 && splitScreenController.getSplitPosition(taskInfo.taskId)
                 == SPLIT_POSITION_BOTTOM_OR_RIGHT;
         relayoutParams.mIsInsetSource = (isAppHeader && !inFullImmersiveMode) || isBottomSplit;

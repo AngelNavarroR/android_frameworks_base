@@ -1052,6 +1052,10 @@ public abstract class OomAdjuster {
                         if (BlossomRamPolicy.PROTECT && app.info != null
                                 && BlossomRamPolicy.isProtected(app.info.packageName)) {
                             rawAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
+                        } else if (app.info != null
+                                && BlossomRamPolicy.isEphemeral(app.info.packageName)) {
+                            // Blossom Fase C: "no cachear" -> primera victima de la banda.
+                            rawAdj = BlossomRamPolicy.EPHEMERAL_CACHED_ADJ;
                         }
                         state.setCurRawAdj(rawAdj);
                         state.setCurAdj(
@@ -1087,6 +1091,10 @@ public abstract class OomAdjuster {
                         if (BlossomRamPolicy.PROTECT && app.info != null
                                 && BlossomRamPolicy.isProtected(app.info.packageName)) {
                             emptyAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
+                        } else if (app.info != null
+                                && BlossomRamPolicy.isEphemeral(app.info.packageName)) {
+                            // Blossom Fase C: "no cachear" -> primera victima de la banda.
+                            emptyAdj = BlossomRamPolicy.EPHEMERAL_CACHED_ADJ;
                         }
                         state.setCurRawAdj(emptyAdj);
                         state.setCurAdj(applyBindAboveClientToAdj(psr.isHasAboveClient(),
@@ -1139,6 +1147,8 @@ public abstract class OomAdjuster {
         final double lowSwapThresholdPercent = mConstants.LOW_SWAP_THRESHOLD_PERCENT;
         final double freeSwapPercent = proactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
         ProcessRecordInternal lruCachedApp = null;
+        // Blossom Fase C: victima preferente (lista "no cachear").
+        ProcessRecordInternal blossomEphemeralApp = null;
 
         for (int i = numLru - 1; i >= 0; i--) {
             final ProcessRecordInternal app = lruList.get(i);
@@ -1191,6 +1201,10 @@ public abstract class OomAdjuster {
                                     true);
                         } else if (proactiveKillsEnabled && !blossomProtected) {
                             lruCachedApp = app;
+                            if (blossomEphemeralApp == null
+                                    && BlossomRamPolicy.isEphemeral(app.getPackageName())) {
+                                blossomEphemeralApp = app;
+                            }
                         }
                         break;
                     case PROCESS_STATE_CACHED_EMPTY:
@@ -1212,6 +1226,10 @@ public abstract class OomAdjuster {
                                         true);
                             } else if (proactiveKillsEnabled && !blossomProtected) {
                                 lruCachedApp = app;
+                                if (blossomEphemeralApp == null
+                                        && BlossomRamPolicy.isEphemeral(app.getPackageName())) {
+                                    blossomEphemeralApp = app;
+                                }
                             }
                         }
                         break;
@@ -1268,6 +1286,11 @@ public abstract class OomAdjuster {
         if (!mProcsToOomAdj.isEmpty()) {
             mInjector.batchSetOomAdj(mProcsToOomAdj);
             mProcsToOomAdj.clear();
+        }
+
+        // Blossom Fase C: si hay un "no cachear" cacheado, muere ese y no otro.
+        if (blossomEphemeralApp != null) {
+            lruCachedApp = blossomEphemeralApp;
         }
 
         if (proactiveKillsEnabled                               // Proactive kills enabled?

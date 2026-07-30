@@ -38,6 +38,7 @@ import com.android.systemui.qs.tiles.ProfilesTile
 import com.android.systemui.qs.tiles.ReadingModeTile
 import com.android.systemui.qs.tiles.RefreshRateTile
 import com.android.systemui.qs.tiles.ScreenshotTile
+import com.android.systemui.qs.tiles.SplitScreenTile
 import com.android.systemui.qs.tiles.SoundTile
 import com.android.systemui.qs.tiles.SyncTile
 import com.android.systemui.qs.tiles.UsbTetherTile
@@ -165,6 +166,12 @@ interface LineageModule {
     @IntoMap
     @StringKey(ScreenshotTile.TILE_SPEC)
     fun bindScreenshotTile(screenshotTile: ScreenshotTile): QSTileImpl<*>
+
+    /** Inject SplitScreenTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(SplitScreenTile.TILE_SPEC)
+    fun bindSplitScreenTile(splitScreenTile: SplitScreenTile): QSTileImpl<*>
 
     /** Inject SmartPixelTile into tileMap in QSModule */
     @Binds
@@ -491,6 +498,21 @@ interface LineageModule {
                     QSTileUIConfig.Resource(
                         iconRes = com.android.internal.R.drawable.ic_screenshot,
                         labelRes = com.android.internal.R.string.global_action_screenshot
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(SplitScreenTile.TILE_SPEC)
+        fun provideSplitScreenTile(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(SplitScreenTile.TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_qs_split_screen,
+                        labelRes = R.string.split_screen_tile_label
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
