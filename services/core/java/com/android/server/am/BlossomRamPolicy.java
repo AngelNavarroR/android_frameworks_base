@@ -53,6 +53,7 @@ final class BlossomRamPolicy {
     private static final String[] CONF_PATHS = {
             "/data/system/ramprotect.conf",
             "/data/adb/ramprotect.conf",   // legado: solo legible si el proceso es root
+            "/system/etc/ramprotect.conf", // default horneado en la ROM
     };
 
     private static final Set<String> PROTECTED;
