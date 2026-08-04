@@ -20083,6 +20083,12 @@ public class ActivityManagerService extends IActivityManager.Stub
 
                     // Exclusions
                     if (proc.isPersistent()) return;
+                    // Blossom Fase B/C: los protegidos no entran en el barrido de pantalla-encendida
+                    // (releaseMemory se invoca con minAdj=900 y el clamp de protegida es
+                    // exactamente 900, asi que sin esta guarda caerian todos en cada
+                    // encendido de pantalla). Ver BlossomRamPolicy y screen-on reclaim.
+                    if (BlossomRamPolicy.PROTECT() && proc.info != null
+                            && BlossomRamPolicy.isProtected(proc.info.packageName)) return;
                     if (proc.userId != currentUser) return;
                     if (state <= ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND) return;
                     if (state == ActivityManager.PROCESS_STATE_HOME) return;

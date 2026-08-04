@@ -1049,7 +1049,7 @@ public abstract class OomAdjuster {
                         // Se clampa la LOCAL rawAdj, NO curCachedAdj: mutar curCachedAdj
                         // corromperia el stepping del bucle y arrastraria a los procesos
                         // siguientes. O(1) (HashSet), sin I/O: apto para este hot-path. ---
-                        if (BlossomRamPolicy.PROTECT && app.info != null
+                        if (BlossomRamPolicy.PROTECT() && app.info != null
                                 && BlossomRamPolicy.isProtected(app.info.packageName)) {
                             rawAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
                         } else if (app.info != null
@@ -1088,7 +1088,7 @@ public abstract class OomAdjuster {
                         int emptyAdj = curEmptyAdj;
                         // --- Blossom RAM policy: misma proteccion en la banda "empty", que es
                         // donde suele caer una app de banca en background con servicios. ---
-                        if (BlossomRamPolicy.PROTECT && app.info != null
+                        if (BlossomRamPolicy.PROTECT() && app.info != null
                                 && BlossomRamPolicy.isProtected(app.info.packageName)) {
                             emptyAdj = BlossomRamPolicy.PROTECTED_CACHED_ADJ;
                         } else if (app.info != null
@@ -1170,7 +1170,7 @@ public abstract class OomAdjuster {
 
                 final ProcessServiceRecordInternal psr = app.getServices();
                 // Blossom punto (b): protege de los kills por CONTEO/posicion LRU.
-                final boolean blossomProtected = BlossomRamPolicy.PROTECT
+                final boolean blossomProtected = BlossomRamPolicy.PROTECT()
                         && BlossomRamPolicy.isProtected(app.getPackageName());
                 // Count the number of process types.
                 switch (app.getCurProcState()) {

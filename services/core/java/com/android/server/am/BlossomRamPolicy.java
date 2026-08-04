@@ -18,6 +18,7 @@
  */
 package com.android.server.am;
 
+import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.util.Slog;
 
@@ -33,11 +34,23 @@ final class BlossomRamPolicy {
     static final String TAG = "BlossomRamPolicy";
 
     static final boolean ENABLED  = SystemProperties.getBoolean("persist.blossom.ramplanner", true);
-    static final boolean PROTECT  = ENABLED
-            && SystemProperties.getBoolean("persist.blossom.ramplanner.protect", false);
-    /** Fase C: lista "no cachear". Flag propio para poder apagarla sin tocar la protección. */
-    static final boolean EPHEMERAL_ENABLED = ENABLED
-            && SystemProperties.getBoolean("persist.blossom.ramplanner.ephemeral", false);
+
+    /**
+     * Propiedad "timbre": quien cambie la política (el Guardián, un script) escribe el fichero y
+     * luego INCREMENTA esta prop. Aquí se relee sola, sin reiniciar.
+     *   setprop blossom.ramplanner.seq $(( $(getprop blossom.ramplanner.seq 2>/dev/null || echo 0) + 1 ))
+     */
+    private static final String PROP_SEQ = "blossom.ramplanner.seq";
+    /** Cada cuánto se mira el timbre. El hot-path solo lee un long volátil salvo una vez cada tanto. */
+    private static final long CHECK_INTERVAL_MS = 5000;
+
+    private static volatile boolean sProtectOn;
+    private static volatile boolean sEphemeralOn;
+    private static volatile long sLastCheckMs;
+    private static volatile int  sSeq = -1;
+
+    /** Compatibilidad: el resto del código lee PROTECT() en vez del antiguo campo PROTECT. */
+    static boolean PROTECT() { return sProtectOn; }
 
     // --- Fase A: valores tuneados (equipo 2GB, zram 906MB) ---
     static final int   MAX_CACHED_PROCESSES      = 16;
@@ -56,10 +69,18 @@ final class BlossomRamPolicy {
             "/system/etc/ramprotect.conf", // default horneado en la ROM
     };
 
-    private static final Set<String> PROTECTED;
-    private static final Set<String> EPHEMERAL;
+    private static volatile Set<String> PROTECTED = Collections.emptySet();
+    private static volatile Set<String> EPHEMERAL = Collections.emptySet();
 
     static {
+        cargar();
+    }
+
+    /**
+     * Relee la política. Se llama al arrancar y cada vez que cambia el "timbre".
+     * Barato y poco frecuente: el fichero son unas decenas de líneas.
+     */
+    private static void cargar() {
         Set<String> prot = new HashSet<>(Arrays.asList(
                 "com.yellowpepper.pichincha",   // Pichincha
                 "com.pacifico.movilmatico",     // Pacífico
@@ -91,21 +112,43 @@ final class BlossomRamPolicy {
         eph.removeAll(prot);
         PROTECTED = Collections.unmodifiableSet(prot);
         EPHEMERAL = Collections.unmodifiableSet(eph);
+        // Las banderas también se releen: así el interruptor del Guardián surte efecto sin reiniciar.
+        sProtectOn = ENABLED
+                && SystemProperties.getBoolean("persist.blossom.ramplanner.protect", true);
+        sEphemeralOn = ENABLED
+                && SystemProperties.getBoolean("persist.blossom.ramplanner.ephemeral", false);
         if (ENABLED) {
             Slog.i(TAG, "protegidos=" + PROTECTED.size() + " efimeros=" + EPHEMERAL.size()
-                    + " enabled=" + ENABLED + " protect=" + PROTECT
-                    + " ephemeral=" + EPHEMERAL_ENABLED);
+                    + " enabled=" + ENABLED + " protect=" + sProtectOn
+                    + " ephemeral=" + sEphemeralOn);
+        }
+    }
+
+    /**
+     * Mira el timbre como mucho una vez cada CHECK_INTERVAL_MS. En el caso normal esto es
+     * leer un long volátil y comparar: nada de IO ni de lecturas de propiedades en el hot-path.
+     */
+    private static void quizaRecargar() {
+        final long now = SystemClock.uptimeMillis();
+        if (now - sLastCheckMs < CHECK_INTERVAL_MS) return;
+        sLastCheckMs = now;
+        final int seq = SystemProperties.getInt(PROP_SEQ, 0);
+        if (seq != sSeq) {
+            sSeq = seq;
+            cargar();
         }
     }
 
     /** O(1). Hot-path applyLruAdjust — mantener trivial. */
     static boolean isProtected(String packageName) {
-        return PROTECT && packageName != null && PROTECTED.contains(packageName);
+        quizaRecargar();
+        return sProtectOn && packageName != null && PROTECTED.contains(packageName);
     }
 
     /** O(1). Hot-path. "No cachear": primera víctima dentro de la banda cached. */
     static boolean isEphemeral(String packageName) {
-        return EPHEMERAL_ENABLED && packageName != null && EPHEMERAL.contains(packageName);
+        quizaRecargar();
+        return sEphemeralOn && packageName != null && EPHEMERAL.contains(packageName);
     }
 
     private BlossomRamPolicy() {}
