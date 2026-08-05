@@ -154,6 +154,8 @@
 
     <!-- Split Screen Tile -->
     <string name="split_screen_tile_label">Dividir pantalla</string>
+    <string name="pip_tile_label">Ventana flotante</string>
+    <string name="split_screen_tile_unavailable">No disponible en escritorio</string>
 
     <!-- Screenshot Tile -->
     <string name="screenshot_long_press">Long press - selected region</string>

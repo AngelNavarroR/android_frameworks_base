@@ -39,18 +39,31 @@ import com.android.systemui.qs.pipeline.domain.interactor.PanelInteractor;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.CommandQueue;
+import com.android.app.displaylib.PerDisplayRepository;
+import com.android.systemui.model.SysUiState;
+import com.android.wm.shell.shared.desktopmode.DesktopState;
+
+import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_FREEFORM_ACTIVE_IN_DESKTOP_MODE;
 
 import javax.inject.Inject;
 
 /** Quick settings tile: dividir pantalla (split-screen).
- *  Reusa la vía real del sistema: CommandQueue.toggleSplitScreen()
- *  (misma que IStatusBarService.toggleSplitScreen()). */
+ *  Usa CommandQueue.moveFocusedTaskToStageSplit(), que es la via VIVA en Android 16:
+ *  la implementa LauncherProxyService y acaba en Launcher -> Shell, metiendo la app en
+ *  primer plano dentro del split.
+ *
+ *  OJO: NO vale CommandQueue.toggleSplitScreen(). Ese callback existe pero su
+ *  implementacion por defecto esta VACIA y nadie la implementa en este arbol (era el camino
+ *  del Recents legacy, muerto desde que el split se mudo a WMShell): el tile respondia,
+ *  el panel se cerraba y no pasaba absolutamente nada. */
 public class SplitScreenTile extends QSTileImpl<BooleanState> {
 
     public static final String TILE_SPEC = "split_screen";
 
     private final PanelInteractor mPanelInteractor;
     private final CommandQueue mCommandQueue;
+    private final PerDisplayRepository<SysUiState> mSysUiStates;
+    private final DesktopState mDesktopState;
 
     @Inject
     public SplitScreenTile(
@@ -64,12 +77,34 @@ public class SplitScreenTile extends QSTileImpl<BooleanState> {
             ActivityStarter activityStarter,
             QSLogger qsLogger,
             PanelInteractor panelInteractor,
-            CommandQueue commandQueue
+            CommandQueue commandQueue,
+            PerDisplayRepository<SysUiState> sysUiStates,
+            DesktopState desktopState
     ) {
         super(host, uiEventLogger, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
         mPanelInteractor = panelInteractor;
         mCommandQueue = commandQueue;
+        mSysUiStates = sysUiStates;
+        mDesktopState = desktopState;
+    }
+
+    /**
+     * ¿Se puede dividir la pantalla AHORA MISMO?
+     *
+     * Mismo criterio que LauncherProxyService.moveFocusedTaskToStageSplit(): en modo escritorio con
+     * freeform activo esa llamada se sale sin hacer nada, así que el tile se pinta apagado en vez de
+     * fingir que funciona.
+     */
+    private boolean puedeDividir() {
+        try {
+            if (!mDesktopState.canEnterDesktopMode()) return true;
+            SysUiState st = mSysUiStates.get(mContext.getDisplayId());
+            if (st == null) return true;
+            return (st.getFlags() & SYSUI_STATE_FREEFORM_ACTIVE_IN_DESKTOP_MODE) == 0;
+        } catch (Throwable t) {
+            return true;   // ante la duda, disponible: peor es un tile muerto sin explicación
+        }
     }
 
     @Override
@@ -83,7 +118,9 @@ public class SplitScreenTile extends QSTileImpl<BooleanState> {
     }
 
     @Override
-    public void handleSetListening(boolean listening) {}
+    public void handleSetListening(boolean listening) {
+        if (listening) refreshState();   // recalcula disponibilidad al abrir el panel
+    }
 
     @Override
     public boolean isAvailable() {
@@ -92,8 +129,11 @@ public class SplitScreenTile extends QSTileImpl<BooleanState> {
 
     @Override
     public void handleClick(@Nullable Expandable expandable) {
+        if (!puedeDividir()) return;
         mPanelInteractor.collapsePanels();
-        mHandler.post(() -> mCommandQueue.toggleSplitScreen());
+        // leftOrTop=true -> la app actual se queda arriba y el selector pide la segunda
+        mHandler.post(() -> mCommandQueue.moveFocusedTaskToStageSplit(
+                mContext.getDisplayId(), true));
     }
 
     @Override
@@ -111,7 +151,13 @@ public class SplitScreenTile extends QSTileImpl<BooleanState> {
         state.label = mContext.getString(R.string.split_screen_tile_label);
         state.contentDescription = state.label;
         state.icon = maybeLoadResourceIcon(R.drawable.ic_qs_split_screen);
-        state.value = true;
-        state.state = Tile.STATE_INACTIVE;
+        boolean disponible = puedeDividir();
+        state.value = disponible;
+        state.state = disponible ? Tile.STATE_INACTIVE : Tile.STATE_UNAVAILABLE;
+        if (!disponible) {
+            state.secondaryLabel = mContext.getString(R.string.split_screen_tile_unavailable);
+        } else {
+            state.secondaryLabel = null;
+        }
     }
 }

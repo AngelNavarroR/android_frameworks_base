@@ -3216,9 +3216,18 @@ final class ActivityRecord extends WindowToken {
      * @return whether this activity supports PiP multi-window and can be put in the root pinned
      * task.
      */
+    /**
+     * PiP PARA CUALQUIER APP (blossom). Android exige que la app declare
+     * android:supportsPictureInPicture en su manifiesto; con ro.config.force_pip=true ese requisito
+     * se ignora, igual que force_multi_window hace con la multiventana. La app no tiene que
+     * cooperar: la entrada la dispara el sistema ("cmd window pip").
+     */
+    static final boolean FORCE_PIP =
+            android.os.SystemProperties.getBoolean("ro.config.force_pip", false);
+
     boolean supportsPictureInPicture() {
         return mAtmService.mSupportsPictureInPicture && isActivityTypeStandardOrUndefined()
-                && info.supportsPictureInPicture();
+                && (info.supportsPictureInPicture() || FORCE_PIP);
     }
 
     /**
@@ -3381,6 +3390,11 @@ final class ActivityRecord extends WindowToken {
      * @return Whether AppOps allows this package to enter picture-in-picture.
      */
     boolean checkEnterPictureInPictureAppOpsState() {
+        // Con el PiP forzado no se consulta el app-op: solo esta en MODE_ALLOWED para las apps que
+        // declaran PiP, asi que filtraria justo a las que queremos rescatar.
+        if (FORCE_PIP && !info.supportsPictureInPicture()) {
+            return true;
+        }
         return mAtmService.getAppOpsManager().checkOpNoThrow(
                 OP_PICTURE_IN_PICTURE, info.applicationInfo.uid, packageName) == MODE_ALLOWED;
     }

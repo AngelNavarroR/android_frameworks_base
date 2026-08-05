@@ -159,6 +159,12 @@ interface IActivityTaskManager {
     ParceledListSlice<ActivityManager.RecentTaskInfo> getRecentTasks(int maxNum, int flags,
             int userId);
     boolean isTopActivityImmersive();
+
+    /**
+     * Ancla la actividad de primer plano en PiP aunque la app no lo pida ni lo declare.
+     * Requiere MANAGE_ACTIVITY_TASKS; para apps que no declaran PiP hace falta ro.config.force_pip.
+     */
+    boolean enterPictureInPictureModeTop();
     void reportAssistContextExtras(in IBinder assistToken, in Bundle extras,
             in AssistStructure structure, in AssistContent content, in Uri referrer);
 

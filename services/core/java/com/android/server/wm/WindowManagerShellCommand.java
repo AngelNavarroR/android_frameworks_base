@@ -106,6 +106,8 @@ public class WindowManagerShellCommand extends ShellCommand {
                     return runDisplayFoldedArea(pw);
                 case "scaling":
                     return runDisplayScaling(pw);
+                case "pip":
+                    return runEnterPip(pw);
                 case "dismiss-keyguard":
                     return runDismissKeyguard(pw);
                 case "tracing":
@@ -430,6 +432,36 @@ public class WindowManagerShellCommand extends ShellCommand {
 
         mInternal.setSandboxDisplayApis(displayId, sandboxDisplayApis);
         return 0;
+    }
+
+    /**
+     * Mete la app que esta en primer plano en PiP, aunque no lo soporte (requiere
+     * ro.config.force_pip=true; ver ActivityRecord.FORCE_PIP).
+     *
+     * Es un disparador EXPLICITO a proposito: nada cambia hasta que se invoca, en vez de forzar la
+     * entrada automatica al salir de cada app, que convertiria cualquier "inicio" en una ventanita.
+     */
+    private int runEnterPip(PrintWriter pw) {
+        final ActivityTaskManagerService atm = mInternal.mAtmService;
+        final ActivityRecord r;
+        synchronized (atm.mGlobalLock) {
+            final Task top = atm.mRootWindowContainer.getTopDisplayFocusedRootTask();
+            r = top != null ? top.getTopNonFinishingActivity() : null;
+            if (r == null) {
+                pw.println("No hay ninguna app en primer plano");
+                return -1;
+            }
+            if (!ActivityRecord.FORCE_PIP && !r.info.supportsPictureInPicture()) {
+                pw.println(r.packageName + " no soporta PiP y ro.config.force_pip esta apagado");
+                return -1;
+            }
+            final android.app.PictureInPictureParams params = r.pictureInPictureArgs != null
+                    ? r.pictureInPictureArgs
+                    : new android.app.PictureInPictureParams.Builder().build();
+            final boolean ok = atm.enterPictureInPictureMode(r, params, false /* fromClient */);
+            pw.println(ok ? ("PiP: " + r.packageName) : ("No se pudo poner en PiP " + r.packageName));
+            return ok ? 0 : -1;
+        }
     }
 
     private int runDismissKeyguard(PrintWriter pw) throws RemoteException {

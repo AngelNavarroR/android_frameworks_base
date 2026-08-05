@@ -34,6 +34,7 @@ import com.android.systemui.qs.tiles.LocaleTile
 import com.android.systemui.qs.tiles.OnTheGoTile
 import com.android.systemui.qs.tiles.PowerShareTile
 import com.android.systemui.qs.tiles.PreferredNetworkTile
+import com.android.systemui.qs.tiles.PipTile
 import com.android.systemui.qs.tiles.ProfilesTile
 import com.android.systemui.qs.tiles.ReadingModeTile
 import com.android.systemui.qs.tiles.RefreshRateTile
@@ -166,6 +167,12 @@ interface LineageModule {
     @IntoMap
     @StringKey(ScreenshotTile.TILE_SPEC)
     fun bindScreenshotTile(screenshotTile: ScreenshotTile): QSTileImpl<*>
+
+    /** Inject PipTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(PipTile.TILE_SPEC)
+    fun bindPipTile(pipTile: PipTile): QSTileImpl<*>
 
     /** Inject SplitScreenTile into tileMap in QSModule */
     @Binds
@@ -498,6 +505,21 @@ interface LineageModule {
                     QSTileUIConfig.Resource(
                         iconRes = com.android.internal.R.drawable.ic_screenshot,
                         labelRes = com.android.internal.R.string.global_action_screenshot
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(PipTile.TILE_SPEC)
+        fun providePipTile(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(PipTile.TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_qs_pip,
+                        labelRes = R.string.pip_tile_label
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,

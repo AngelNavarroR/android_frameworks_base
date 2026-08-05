@@ -4189,6 +4189,32 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
         return false;
     }
 
+    /**
+     * Ancla la actividad de primer plano en PiP SIN que la app coopere (la llama el tile de
+     * ajustes rapidos). El requisito del manifiesto lo levanta ActivityRecord.FORCE_PIP.
+     */
+    @Override
+    public boolean enterPictureInPictureModeTop() {
+        enforceTaskPermission("enterPictureInPictureModeTop");
+        final long ident = Binder.clearCallingIdentity();
+        try {
+            synchronized (mGlobalLock) {
+                final Task top = mRootWindowContainer.getTopDisplayFocusedRootTask();
+                final ActivityRecord r = top != null ? top.getTopNonFinishingActivity() : null;
+                if (r == null) {
+                    Slog.w(TAG, "enterPictureInPictureModeTop: no hay app en primer plano");
+                    return false;
+                }
+                final PictureInPictureParams params = r.pictureInPictureArgs != null
+                        ? r.pictureInPictureArgs
+                        : new PictureInPictureParams.Builder().build();
+                return enterPictureInPictureMode(r, params, false /* fromClient */);
+            }
+        } finally {
+            Binder.restoreCallingIdentity(ident);
+        }
+    }
+
     boolean enterPictureInPictureMode(@NonNull ActivityRecord r,
             @NonNull PictureInPictureParams params, boolean fromClient) {
         return enterPictureInPictureMode(r, params, fromClient, false /* isAutoEnter */);
