@@ -71,10 +71,11 @@ abstract class SysUIUnfoldModule {
         impl: FoldableDisplaySwitchTrackingInteractor
     ): CoreStartable
 
-    @Binds
-    @IntoMap
-    @ClassKey(DisplaySwitchLatencyTracker::class)
-    abstract fun bindsDisplaySwitchLatencyTracker(impl: DisplaySwitchLatencyTracker): CoreStartable
+    // @Binds
+    // @IntoMap
+    // @ClassKey(DisplaySwitchLatencyTracker::class)
+    // 🚫 no es plegable: no hay cambio de pantalla
+    // abstract fun bindsDisplaySwitchLatencyTracker(impl: DisplaySwitchLatencyTracker): CoreStartable
 
     @Binds
     @SysUISingleton
@@ -109,10 +110,11 @@ abstract class SysUIUnfoldModule {
 
 @Module
 interface SysUIUnfoldStartableModule {
-    @Binds
-    @IntoMap
-    @ClassKey(UnfoldInitializationStartable::class)
-    fun bindsUnfoldInitializationStartable(impl: UnfoldInitializationStartable): CoreStartable
+    // 🚫 no es plegable: este equipo no tiene segunda pantalla que desplegar
+    // @Binds
+    // @IntoMap
+    // @ClassKey(UnfoldInitializationStartable::class)
+    // fun bindsUnfoldInitializationStartable(impl: UnfoldInitializationStartable): CoreStartable
 
     @Binds
     @IntoMap

@@ -189,10 +189,11 @@ class UnfoldTransitionModule {
 
     @Module
     interface Startables {
-        @Binds
-        @IntoMap
-        @ClassKey(UnfoldTraceLogger::class)
-        fun bindUnfoldTraceLogger(impl: UnfoldTraceLogger): CoreStartable
+        // @Binds
+        // @IntoMap
+        // @ClassKey(UnfoldTraceLogger::class)
+        // 🚫 no es plegable
+        // fun bindUnfoldTraceLogger(impl: UnfoldTraceLogger): CoreStartable
     }
 }
 

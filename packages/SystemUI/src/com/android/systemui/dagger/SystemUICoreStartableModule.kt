@@ -236,10 +236,11 @@ abstract class SystemUICoreStartableModule {
     abstract fun bindChipbarController(sysui: ChipbarCoordinator): CoreStartable
 
     /** Inject into StylusUsiPowerStartable) */
-    @Binds
-    @IntoMap
-    @ClassKey(StylusUsiPowerStartable::class)
-    abstract fun bindStylusUsiPowerStartable(sysui: StylusUsiPowerStartable): CoreStartable
+    // @Binds
+    // @IntoMap
+    // @ClassKey(StylusUsiPowerStartable::class)
+    // 🚫 sin lapiz en este equipo
+    // abstract fun bindStylusUsiPowerStartable(sysui: StylusUsiPowerStartable): CoreStartable
 
     @Binds
     @IntoMap

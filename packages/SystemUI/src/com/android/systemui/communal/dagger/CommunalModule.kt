@@ -69,7 +69,11 @@ import kotlinx.coroutines.CoroutineScope
             CommunalPrefsRepositoryModule::class,
             CommunalSettingsRepositoryModule::class,
             CommunalSmartspaceRepositoryModule::class,
-            CommunalStartableModule::class,
+            // 🚫 Glanceable Hub / Communal DESACTIVADO en este equipo: sus 10 CoreStartable
+            // se construian igual al arrancar SystemUI aunque la funcion este apagada.
+            // Quitar el modulo del include los quita los 10 de una vez; las clases siguen
+            // ahi, solo desaparecen del mapa de arranque.
+            // CommunalStartableModule::class,
             GlanceableHubWidgetManagerModule::class,
             CommunalSuppressionModule::class,
         ]
