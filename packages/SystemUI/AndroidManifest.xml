@@ -454,6 +454,11 @@
         tools:replace="android:appComponentFactory"
         android:appComponentFactory=".PhoneSystemUIAppComponentFactory"
         android:enableOnBackInvokedCallback="true">
+        <!-- blossom: permite a heapprofd y simpleperf perfilar SystemUI para cazar la fuga
+             de heap nativo (unos 170 MB en 3,6 dias de uso). NO es android:debuggable: no
+             desoptimiza ART ni toca ninguna propiedad global que mire la banca.
+             QUITAR en el horneado siguiente, cuando la fuga este arreglada. -->
+        <profileable android:shell="true"/>
         <!-- Keep theme in sync with SystemUIApplication.onCreate().
              Setting the theme on the application does not affect views inflated by services.
              The application theme is set again from onCreate to take effect for those views. -->
