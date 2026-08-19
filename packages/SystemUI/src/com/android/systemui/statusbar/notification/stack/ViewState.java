@@ -67,12 +67,35 @@ public class ViewState implements Dumpable {
     private static final Map<View, Runnable> sPendingLayerChanges = new WeakHashMap<>();
 
     private static void debouncedSetFaded(View view, Runnable action) {
-        Runnable prev = sPendingLayerChanges.get(view);
+        // blossom (19 ago 2026): FUGA DE MEMORIA arreglada aqui.
+        //
+        // sPendingLayerChanges es un WeakHashMap<View, Runnable>, pero los Runnable que le
+        // llegan son lambdas que CAPTURAN la propia view que hace de clave:
+        //     debouncedSetFaded(view, () -> view.setLayerType(newLayerType, null));
+        // En un WeakHashMap la clave es debil pero el VALOR se retiene con fuerza. Si el valor
+        // referencia a su clave, la clave queda fuertemente alcanzable y la entrada NO SE RECOGE
+        // NUNCA. El mapa crecia sin tope, y cada entrada anclaba un ExpandableNotificationRow
+        // entero con su jerarquia de vistas y su Context.
+        //
+        // MEDIDO: `class ViewState` retenia 687 bytes recien arrancado y 7,08 MB tras 9,4 h de
+        // uso; 22.861 vistas vivas tras 3,6 dias. Era el primer delta del diff de ahat, por goleada.
+        //
+        // ARREGLO: quitar la entrada en cuanto la accion se ejecuta. Durante los 150 ms de espera
+        // la entrada sigue anclada a proposito (es lo que hace falta para poder cancelarla), pero
+        // ya esta acotada en el tiempo en vez de ser permanente.
+        Runnable prev = sPendingLayerChanges.remove(view);
         if (prev != null) {
             sLayerHandler.removeCallbacks(prev);
         }
-        sPendingLayerChanges.put(view, action);
-        sLayerHandler.postDelayed(action, LAYER_DEBOUNCE_MS);
+        Runnable pending = new Runnable() {
+            @Override
+            public void run() {
+                sPendingLayerChanges.remove(view);
+                action.run();
+            }
+        };
+        sPendingLayerChanges.put(view, pending);
+        sLayerHandler.postDelayed(pending, LAYER_DEBOUNCE_MS);
     }
 
     public ViewState() {
