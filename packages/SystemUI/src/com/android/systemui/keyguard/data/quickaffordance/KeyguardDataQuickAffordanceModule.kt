@@ -39,7 +39,12 @@ interface KeyguardDataQuickAffordanceModule {
             flashlight: FlashlightQuickAffordanceConfig,
             home: HomeControlsKeyguardQuickAffordanceConfig,
             mute: MuteQuickAffordanceConfig,
-            quickAccessWallet: QuickAccessWalletKeyguardQuickAffordanceConfig,
+            // blossom: Wallet FUERA. Este equipo no tiene NFC (removido en la ROM) ni Google
+            // Pay, asi que ningun servicio de wallet responde. Medido el 18 ago: erroraba
+            // "Wallet card retrieval error" 237 veces en 20 h. Dagger construye TODOS los
+            // configs de este Set aunque el acceso no este en config_keyguardQuickAffordanceDefaults,
+            // asi que quitarlo del array no bastaba: hay que sacarlo de aqui.
+            // quickAccessWallet: QuickAccessWalletKeyguardQuickAffordanceConfig,
             qrCodeScanner: QrCodeScannerKeyguardQuickAffordanceConfig,
             videoCamera: VideoCameraQuickAffordanceConfig,
         ): Set<KeyguardQuickAffordanceConfig> {
@@ -50,7 +55,7 @@ interface KeyguardDataQuickAffordanceModule {
                 flashlight,
                 home,
                 mute,
-                quickAccessWallet,
+                // quickAccessWallet,   // blossom: ver arriba
                 qrCodeScanner,
                 videoCamera,
             )

@@ -997,7 +997,9 @@
     ignored. -->
     <string-array name="config_keyguardQuickAffordanceDefaults" translatable="false">
         <item>bottom_start:home</item>
-        <item>bottom_end:wallet</item>
+        <!-- blossom: Wallet retirado del Set de Dagger (sin NFC ni Google Pay en este equipo),
+             asi que este defecto apuntaria a un config inexistente. La ranura queda libre;
+             se elige lo que se quiera desde Ajustes de pantalla de bloqueo. -->
     </string-array>
 
     <!-- Package name for the app that implements the wallpaper picker. -->
