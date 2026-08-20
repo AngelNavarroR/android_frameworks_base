@@ -453,23 +453,12 @@
         android:directBootAware="true"
         tools:replace="android:appComponentFactory"
         android:appComponentFactory=".PhoneSystemUIAppComponentFactory"
-        android:debuggable="true"
         android:enableOnBackInvokedCallback="true">
         <!-- blossom: permite a heapprofd y simpleperf perfilar SystemUI para cazar la fuga
-             de heap nativo (unos 170 MB en 3,6 dias de uso). Se dejo puesto aunque heapprofd
-             acabara fallando por otro motivo (ver el comentario de abajo), por si sirve luego.
+             de heap nativo (unos 170 MB en 3,6 dias de uso). NO es android:debuggable: no
+             desoptimiza ART ni toca ninguna propiedad global que mire la banca.
              QUITAR en el horneado siguiente, cuando la fuga este arreglada. -->
         <profileable android:shell="true"/>
-        <!-- blossom DIAGNOSTICO TEMPORAL: debuggable hace el proceso dumpable, y eso es lo
-             unico que desbloquea `am dumpheap` (hprof de Java, para nombrar al retenedor de las
-             22.861 vistas) y el volcado de memoria inalcanzable de dumpsys meminfo (los ~170 MB
-             nativos).
-             heapprofd por si solo NO basta: falla antes, al pasar descriptores (MSG_CTRUNC).
-             NO toca ro.debuggable global, asi que la banca sigue viendo el equipo igual.
-             OJO: desoptimiza ART en SystemUI, o sea que las cifras ABSOLUTAS de memoria
-             cambian; sirve para localizar la fuga, no para medirla.
-             QUITAR ESTA LINEA Y profileable en el horneado del arreglo. -->
-        <!-- android:debuggable se declara en el tag <application> de arriba -->
         <!-- Keep theme in sync with SystemUIApplication.onCreate().
              Setting the theme on the application does not affect views inflated by services.
              The application theme is set again from onCreate to take effect for those views. -->
