@@ -134,7 +134,8 @@ public class ThreeFingersSwipeListener implements PointerEventListener {
             maxY = Math.max(maxY, y);
             minY = Math.min(minY, y);
         }
-        if (maxY - minY <= mDensity * 150.0f) {
+        // blossom: 150 dp rechazaba manos reales (258-368 px de dispersion a 256 dpi).
+        if (maxY - minY <= mDensity * 300.0f) {
             return maxX - minX <= ((float) (mScreenWidth < mScreenHeight ? mScreenWidth : mScreenHeight));
         }
         return false;
