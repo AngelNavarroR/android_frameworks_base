@@ -2177,7 +2177,9 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, CoreSt
         }
         final int userId = mSelectedUserInteractor.getSelectedUserId();
         final boolean canFpUnlock = isUnlockWithFingerprintPossible(userId);
-        if (canFpUnlock && mDozeParameters.get().getAlwaysOn()) {
+        // Sin UDFPS no hay destello que evitar: si screenTurnedOff llego antes que
+        // startedGoingToSleep, mGoingToSleep quedaba en true y se aparcaban los aciertos.
+        if (!isUdfpsSupported() || (canFpUnlock && mDozeParameters.get().getAlwaysOn())) {
             mGoingToSleep = false;
         }
         updateFingerprintListeningState(BIOMETRIC_ACTION_UPDATE);
