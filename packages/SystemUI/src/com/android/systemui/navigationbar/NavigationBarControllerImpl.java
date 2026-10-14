@@ -18,7 +18,6 @@ package com.android.systemui.navigationbar;
 
 import static com.android.systemui.navigationbar.gestural.EdgeBackGestureHandler.DEBUG_MISSING_GESTURE_TAG;
 import static com.android.systemui.shared.recents.utilities.Utilities.isLargeScreen;
-import static com.android.wm.shell.Flags.enableTaskbarOnPhones;
 
 import android.content.Context;
 import android.content.pm.ActivityInfo;
@@ -290,8 +289,9 @@ public class NavigationBarControllerImpl implements
     boolean supportsTaskbar() {
         // Enable for tablets, unfolded state on a foldable device, (non handheld AND flag is set),
         // or handheld when enableTaskbarOnPhones() returns true.
-        boolean foldedOrPhone = !mIsPhone || enableTaskbarOnPhones();
-        return mIsLargeScreen || foldedOrPhone;
+        // BLOSSOM: sin Launcher3 nadie dibuja la Taskbar en el telefono (Inicio Ligero no la
+        // tiene), asi que en handheld se usa la barra de navegacion de SystemUI.
+        return mIsLargeScreen || !mIsPhone;
     }
 
     // TODO: b/408503553 - Remove system decor callbacks once the flag is cleaned up.
